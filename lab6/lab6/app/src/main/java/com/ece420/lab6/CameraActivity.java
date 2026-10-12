@@ -208,6 +208,41 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback{
         // Note that you only need to manipulate data[0:size] that corresponds to luminance
         // The rest data[size:data.length] is for colorness that we handle for you
         // *********************** START YOUR CODE HERE  **************************** //
+        int[] histogram = new int[256];
+        int[] cdf = new int[256];
+
+        // Calculate the histogram
+        for (int i = 0; i < size; i++){
+            int val = Byte.toUnsignedInt(data[i]);
+            histogram[val]+=1;
+        }
+
+        // Calculate the cdf
+        int sum = 0;
+        for (int i = 0; i < 256; i++){
+            sum += histogram[i];
+            cdf[i] = sum;
+        }
+
+        // Find the minimum value of the cdf (minimum will be the first cdf value > 0 since
+        // cdf is built cumulatively adding)
+        int cdf_min = 0;
+        for (int i = 0; i < 256; i++) {
+            if (histogram[i] > 0) {
+                cdf_min = cdf[i];
+                break;
+            }
+        }
+
+        // Calculate the normalization
+        for (int i = 0; i < 256; i++){
+            histogram[i] = Math.round((float) (cdf[i] - cdf_min) /(width*height-1)*(256-1));
+        }
+        // Apply the histogram
+        for (int i = 0; i < size; i++){
+            histeqData[i] = (byte) histogram[Byte.toUnsignedInt(data[i])];
+        }
+
 
 
 
@@ -229,6 +264,24 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback{
         // The rest data[size:data.length] is ignored since we only want grayscale output
         // *********************** START YOUR CODE HERE  **************************** //
 
+
+        // Perform convolution (the order of multiplying effectively flips the kernel)
+        for (int i = 1; i < height-1; i++){
+            for (int j = 1; j < width-1; j++){
+                double top_left = Byte.toUnsignedInt(data[(i-1)*width+j-1])*kernel[2][2];
+                double top_middle = Byte.toUnsignedInt(data[(i-1)*width+j])*kernel[2][1];
+                double top_right = Byte.toUnsignedInt(data[(i-1)*width+j+1])*kernel[2][0];
+                double middle_left = Byte.toUnsignedInt(data[i*width+j-1])*kernel[1][2];
+                double middle_middle = Byte.toUnsignedInt(data[i*width+j])*kernel[1][1];
+                double middle_right = Byte.toUnsignedInt(data[i*width+j+1])*kernel[1][0];
+                double bottom_left = Byte.toUnsignedInt(data[(i+1)*width+j-1])*kernel[0][2];
+                double bottom_middle = Byte.toUnsignedInt(data[(i+1)*width+j])*kernel[0][1];
+                double bottom_right = Byte.toUnsignedInt(data[(i+1)*width+j+1])*kernel[0][0];
+                convData[i*width+j] = (int) (top_left +top_middle + top_right +
+                                        middle_left + middle_middle + middle_right +
+                                        bottom_left + bottom_middle + bottom_right);
+            }
+        }
 
 
         // *********************** End YOUR CODE HERE  **************************** //
