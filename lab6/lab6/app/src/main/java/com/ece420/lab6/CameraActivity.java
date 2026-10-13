@@ -207,24 +207,24 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
         // luminance
         // The rest data[size:data.length] is for colorness that we handle for you
         // *********************** START YOUR CODE HERE **************************** //
+        // Initialize histogram and cdf (all brightness values will be in 0-255 since 8 bit values)
         int[] histogram = new int[256];
         int[] cdf = new int[256];
 
-        // Calculate the histogram
+        // Calculate the histogram by counting the number of occurrences of each value of each pixel
         for (int i = 0; i < size; i++) {
-            int val = Byte.toUnsignedInt(data[i]);
-            histogram[val] += 1;
+            int val = Byte.toUnsignedInt(data[i]);  // Extract the value of the pixel
+            histogram[val] += 1;  // use that value to index into the histogram and increment that index
         }
 
-        // Calculate the cdf
+        // Calculate the cdf by taking the cumulative sum of the histogram at each index
         int sum = 0;
         for (int i = 0; i < 256; i++) {
             sum += histogram[i];
             cdf[i] = sum;
         }
 
-        // Find the minimum value of the cdf (minimum will be the first cdf value > 0
-        // since
+        // Find the minimum value of the cdf (minimum will be the first cdf value > 0 since
         // cdf is built cumulatively adding)
         int cdf_min = 0;
         for (int i = 0; i < 256; i++) {
@@ -234,11 +234,11 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
             }
         }
 
-        // Calculate the normalization
+        // Calculate the normalization using the given equation on lab
         for (int i = 0; i < 256; i++) {
             histogram[i] = Math.round((float) (cdf[i] - cdf_min) / (width * height - 1) * (256 - 1));
         }
-        // Apply the histogram
+        // Apply the histogram to get the Histeq image
         for (int i = 0; i < size; i++) {
             histeqData[i] = (byte) histogram[Byte.toUnsignedInt(data[i])];
         }
@@ -263,7 +263,19 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
         // output
         // *********************** START YOUR CODE HERE **************************** //
 
-        // Perform convolution (the order of multiplying effectively flips the kernel)
+        // Detect if there is a negative in the kernel to determine whether we need to clamp the output
+        // If there are negatives, we don't want to clamp the negative outputs since it loses information
+        boolean clamp = true;
+        for (int i = 0; i < 3; i++){
+            for (int j = 0; j < 3; j++){
+                if (kernel[i][j] < 0){
+                    clamp = false;
+                    break;
+                }
+            }
+        }
+
+        // Perform convolution (the order of multiplying effectively flips the kernel in both axes)
         for (int i = 1; i < height - 1; i++) {
             for (int j = 1; j < width - 1; j++) {
                 double top_left = Byte.toUnsignedInt(data[(i - 1) * width + j - 1]) * kernel[2][2];
@@ -276,17 +288,27 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
                 double bottom_middle = Byte.toUnsignedInt(data[(i + 1) * width + j]) * kernel[0][1];
                 double bottom_right = Byte.toUnsignedInt(data[(i + 1) * width + j + 1]) * kernel[0][0];
 
+                // Sum up all the individual kernel multiplications to get the single pixel value
                 double sum = top_left + top_middle + top_right +
                         middle_left + middle_middle + middle_right +
                         bottom_left + bottom_middle + bottom_right;
 
+                // Need to cast to integer since the calculations are doubles
+                // Some information is lost but the value is close enough to be perceived
                 int out = (int) sum;
-                if (out < 0) { // Clamp data to 8 bit limits to prep for merge
+
+                // Clamp data to 8 bit limits if no negatives in kernel to prep for merge
+                // If there are negatives, we don't want to clamp the negatives since that loses information
+                if (out < 0 && clamp) {
                     out = 0;
                 }
+
+                // Clamp the values over 255 to avoid overflow no matter what
                 if (out > 255) {
                     out = 255;
                 }
+
+                // Insert the pixel into the convolved image
                 convData[i * width + j] = out;
             }
         }
