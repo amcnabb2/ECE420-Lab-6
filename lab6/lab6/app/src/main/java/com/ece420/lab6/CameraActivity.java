@@ -23,8 +23,7 @@ import java.io.IOException;
 import java.lang.Math;
 // import java.util.List;
 
-
-public class CameraActivity extends Activity implements SurfaceHolder.Callback{
+public class CameraActivity extends Activity implements SurfaceHolder.Callback {
 
     // UI Variable
     private SurfaceView surfaceView;
@@ -38,9 +37,9 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback{
     private int width = 640;
     private int height = 480;
     // Kernels
-    private double[][] kernelS = new double[][] {{-1,-1,-1},{-1,9,-1},{-1,-1,-1}};
-    private double[][] kernelX = new double[][] {{1,0,-1},{1,0,-1},{1,0,-1}};
-    private double[][] kernelY = new double[][] {{1,1,1},{0,0,0},{-1,-1,-1}};
+    private double[][] kernelS = new double[][] { { -1, -1, -1 }, { -1, 9, -1 }, { -1, -1, -1 } };
+    private double[][] kernelX = new double[][] { { 1, 0, -1 }, { 1, 0, -1 }, { 1, 0, -1 } };
+    private double[][] kernelY = new double[][] { { 1, 1, 1 }, { 0, 0, 0 }, { -1, -1, -1 } };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,23 +47,25 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback{
         getWindow().setFormat(PixelFormat.UNKNOWN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_camera);
-        super.setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        super.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
         // Modify UI Text
         textHelper = (TextView) findViewById(R.id.Helper);
-        if(MainActivity.appFlag == 1) textHelper.setText("Histogram Equalized Image");
-        else if(MainActivity.appFlag == 2) textHelper.setText("Sharpened Image");
-        else if(MainActivity.appFlag == 3) textHelper.setText("Edge Detected Image");
+        if (MainActivity.appFlag == 1)
+            textHelper.setText("Histogram Equalized Image");
+        else if (MainActivity.appFlag == 2)
+            textHelper.setText("Sharpened Image");
+        else if (MainActivity.appFlag == 3)
+            textHelper.setText("Edge Detected Image");
 
         // Setup Surface View handler
-        surfaceView = (SurfaceView)findViewById(R.id.ViewOrigin);
+        surfaceView = (SurfaceView) findViewById(R.id.ViewOrigin);
         surfaceHolder = surfaceView.getHolder();
         surfaceHolder.addCallback(this);
         surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-        surfaceView2 = (SurfaceView)findViewById(R.id.ViewHisteq);
+        surfaceView2 = (SurfaceView) findViewById(R.id.ViewHisteq);
         surfaceHolder2 = surfaceView2.getHolder();
     }
-
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
@@ -74,7 +75,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback{
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        if(!previewing) {
+        if (!previewing) {
             camera = Camera.open();
             if (camera != null) {
                 try {
@@ -85,20 +86,19 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback{
                     // 2592x1944;1920x1080;1440x1080;1280x720;640x480;352x288;320x240;176x144;
                     // List<Camera.Size> sizes = parameters.getSupportedPictureSizes();
                     // for(int i=0; i<sizes.size(); i++) {
-                    //     int height = sizes.get(i).height;
-                    //     int width = sizes.get(i).width;
-                    //     Log.d("size: ", Integer.toString(width) + ";" + Integer.toString(height));
+                    // int height = sizes.get(i).height;
+                    // int width = sizes.get(i).width;
+                    // Log.d("size: ", Integer.toString(width) + ";" + Integer.toString(height));
                     // }
                     camera.setParameters(parameters);
                     camera.setDisplayOrientation(90);
                     camera.setPreviewDisplay(surfaceHolder);
                     camera.setPreviewCallback(new PreviewCallback() {
-                        public void onPreviewFrame(byte[] data, Camera camera)
-                        {
+                        public void onPreviewFrame(byte[] data, Camera camera) {
                             // Lock canvas
                             Canvas canvas = surfaceHolder2.lockCanvas(null);
                             // Where Callback Happens, camera preview frame ready
-                            onCameraFrame(canvas,data);
+                            onCameraFrame(canvas, data);
                             // Unlock canvas
                             surfaceHolder2.unlockCanvasAndPost(canvas);
                         }
@@ -132,16 +132,14 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback{
         int retData[] = new int[width * height];
 
         // Apply different processing methods
-        if(MainActivity.appFlag == 1){
+        if (MainActivity.appFlag == 1) {
             byte[] histeqData = histEq(data, width, height);
             retData = yuv2rgb(histeqData);
-        }
-        else if (MainActivity.appFlag == 2){
+        } else if (MainActivity.appFlag == 2) {
 
             int[] sharpData = conv2(data, width, height, kernelS);
             retData = merge(sharpData, sharpData);
-        }
-        else if (MainActivity.appFlag == 3){
+        } else if (MainActivity.appFlag == 3) {
             int[] xData = conv2(data, width, height, kernelX);
             int[] yData = conv2(data, width, height, kernelY);
             retData = merge(xData, yData);
@@ -150,11 +148,12 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback{
         // Create ARGB Image, rotate and draw
         Bitmap bmp = Bitmap.createBitmap(retData, width, height, Bitmap.Config.ARGB_8888);
         bmp = Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(), bmp.getHeight(), matrix, true);
-        canvas.drawBitmap(bmp, new Rect(0,0, height, width), new Rect(0,0, canvas.getWidth(), canvas.getHeight()),null);
+        canvas.drawBitmap(bmp, new Rect(0, 0, height, width), new Rect(0, 0, canvas.getWidth(), canvas.getHeight()),
+                null);
     }
 
     // Helper function to convert YUV to RGB
-    public int[] yuv2rgb(byte[] data){
+    public int[] yuv2rgb(byte[] data) {
         final int frameSize = width * height;
         int[] rgb = new int[frameSize];
 
@@ -162,7 +161,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback{
             int uvp = frameSize + (j >> 1) * width, u = 0, v = 0;
             for (int i = 0; i < width; i++, yp++) {
                 int y = (0xff & ((int) data[yp])) - 16;
-                y = y<0? 0:y;
+                y = y < 0 ? 0 : y;
 
                 if ((i & 1) == 0) {
                     v = (0xff & data[uvp++]) - 128;
@@ -174,12 +173,12 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback{
                 int g = (y1192 - 833 * v - 400 * u);
                 int b = (y1192 + 2066 * u);
 
-                r = r<0? 0:r;
-                r = r>262143? 262143:r;
-                g = g<0? 0:g;
-                g = g>262143? 262143:g;
-                b = b<0? 0:b;
-                b = b>262143? 262143:b;
+                r = r < 0 ? 0 : r;
+                r = r > 262143 ? 262143 : r;
+                g = g < 0 ? 0 : g;
+                g = g > 262143 ? 262143 : g;
+                b = b < 0 ? 0 : b;
+                b = b > 262143 ? 262143 : b;
 
                 rgb[yp] = 0xff000000 | ((r << 6) & 0xff0000) | ((g >> 2) & 0xff00) | ((b >> 10) & 0xff);
             }
@@ -188,43 +187,44 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback{
     }
 
     // Helper function to merge the results and convert GrayScale to RGB
-    public int[] merge(int[] xdata,int[] ydata){
+    public int[] merge(int[] xdata, int[] ydata) {
         int size = height * width;
         int[] mergeData = new int[size];
-        for(int i=0; i<size; i++)
-        {
-            int p = (int)Math.sqrt((xdata[i] * xdata[i] + ydata[i] * ydata[i]) / 2);
-            mergeData[i] = 0xff000000 | p<<16 | p<<8 | p;
+        for (int i = 0; i < size; i++) {
+            int p = (int) Math.sqrt((xdata[i] * xdata[i] + ydata[i] * ydata[i]) / 2);
+            mergeData[i] = 0xff000000 | p << 16 | p << 8 | p;
         }
         return mergeData;
     }
 
     // Function for Histogram Equalization
-    public byte[] histEq(byte[] data, int width, int height){
+    public byte[] histEq(byte[] data, int width, int height) {
         byte[] histeqData = new byte[data.length];
         int size = height * width;
 
         // Perform Histogram Equalization
-        // Note that you only need to manipulate data[0:size] that corresponds to luminance
+        // Note that you only need to manipulate data[0:size] that corresponds to
+        // luminance
         // The rest data[size:data.length] is for colorness that we handle for you
-        // *********************** START YOUR CODE HERE  **************************** //
+        // *********************** START YOUR CODE HERE **************************** //
         int[] histogram = new int[256];
         int[] cdf = new int[256];
 
         // Calculate the histogram
-        for (int i = 0; i < size; i++){
+        for (int i = 0; i < size; i++) {
             int val = Byte.toUnsignedInt(data[i]);
-            histogram[val]+=1;
+            histogram[val] += 1;
         }
 
         // Calculate the cdf
         int sum = 0;
-        for (int i = 0; i < 256; i++){
+        for (int i = 0; i < 256; i++) {
             sum += histogram[i];
             cdf[i] = sum;
         }
 
-        // Find the minimum value of the cdf (minimum will be the first cdf value > 0 since
+        // Find the minimum value of the cdf (minimum will be the first cdf value > 0
+        // since
         // cdf is built cumulatively adding)
         int cdf_min = 0;
         for (int i = 0; i < 256; i++) {
@@ -235,56 +235,63 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback{
         }
 
         // Calculate the normalization
-        for (int i = 0; i < 256; i++){
-            histogram[i] = Math.round((float) (cdf[i] - cdf_min) /(width*height-1)*(256-1));
+        for (int i = 0; i < 256; i++) {
+            histogram[i] = Math.round((float) (cdf[i] - cdf_min) / (width * height - 1) * (256 - 1));
         }
         // Apply the histogram
-        for (int i = 0; i < size; i++){
+        for (int i = 0; i < size; i++) {
             histeqData[i] = (byte) histogram[Byte.toUnsignedInt(data[i])];
         }
 
-
-
-
-        // *********************** End YOUR CODE HERE  **************************** //
+        // *********************** End YOUR CODE HERE **************************** //
         // We copy the colorness part for you, do not modify if you want rgb images
-        for(int i=size; i<data.length; i++){
+        for (int i = size; i < data.length; i++) {
             histeqData[i] = data[i];
         }
         return histeqData;
     }
 
-    public int[] conv2(byte[] data, int width, int height, double kernel[][]){
+    public int[] conv2(byte[] data, int width, int height, double kernel[][]) {
         // 0 is black and 255 is white.
         int size = height * width;
         int[] convData = new int[size];
 
         // Perform single channel 2D Convolution
-        // Note that you only need to manipulate data[0:size] that corresponds to luminance
-        // The rest data[size:data.length] is ignored since we only want grayscale output
-        // *********************** START YOUR CODE HERE  **************************** //
-
+        // Note that you only need to manipulate data[0:size] that corresponds to
+        // luminance
+        // The rest data[size:data.length] is ignored since we only want grayscale
+        // output
+        // *********************** START YOUR CODE HERE **************************** //
 
         // Perform convolution (the order of multiplying effectively flips the kernel)
-        for (int i = 1; i < height-1; i++){
-            for (int j = 1; j < width-1; j++){
-                double top_left = Byte.toUnsignedInt(data[(i-1)*width+j-1])*kernel[2][2];
-                double top_middle = Byte.toUnsignedInt(data[(i-1)*width+j])*kernel[2][1];
-                double top_right = Byte.toUnsignedInt(data[(i-1)*width+j+1])*kernel[2][0];
-                double middle_left = Byte.toUnsignedInt(data[i*width+j-1])*kernel[1][2];
-                double middle_middle = Byte.toUnsignedInt(data[i*width+j])*kernel[1][1];
-                double middle_right = Byte.toUnsignedInt(data[i*width+j+1])*kernel[1][0];
-                double bottom_left = Byte.toUnsignedInt(data[(i+1)*width+j-1])*kernel[0][2];
-                double bottom_middle = Byte.toUnsignedInt(data[(i+1)*width+j])*kernel[0][1];
-                double bottom_right = Byte.toUnsignedInt(data[(i+1)*width+j+1])*kernel[0][0];
-                convData[i*width+j] = (int) (top_left +top_middle + top_right +
-                                        middle_left + middle_middle + middle_right +
-                                        bottom_left + bottom_middle + bottom_right);
+        for (int i = 1; i < height - 1; i++) {
+            for (int j = 1; j < width - 1; j++) {
+                double top_left = Byte.toUnsignedInt(data[(i - 1) * width + j - 1]) * kernel[2][2];
+                double top_middle = Byte.toUnsignedInt(data[(i - 1) * width + j]) * kernel[2][1];
+                double top_right = Byte.toUnsignedInt(data[(i - 1) * width + j + 1]) * kernel[2][0];
+                double middle_left = Byte.toUnsignedInt(data[i * width + j - 1]) * kernel[1][2];
+                double middle_middle = Byte.toUnsignedInt(data[i * width + j]) * kernel[1][1];
+                double middle_right = Byte.toUnsignedInt(data[i * width + j + 1]) * kernel[1][0];
+                double bottom_left = Byte.toUnsignedInt(data[(i + 1) * width + j - 1]) * kernel[0][2];
+                double bottom_middle = Byte.toUnsignedInt(data[(i + 1) * width + j]) * kernel[0][1];
+                double bottom_right = Byte.toUnsignedInt(data[(i + 1) * width + j + 1]) * kernel[0][0];
+
+                double sum = top_left + top_middle + top_right +
+                        middle_left + middle_middle + middle_right +
+                        bottom_left + bottom_middle + bottom_right;
+
+                int out = (int) sum;
+                if (out < 0) { // Clamp data to 8 bit limits to prep for merge
+                    out = 0;
+                }
+                if (out > 255) {
+                    out = 255;
+                }
+                convData[i * width + j] = out;
             }
         }
 
-
-        // *********************** End YOUR CODE HERE  **************************** //
+        // *********************** End YOUR CODE HERE **************************** //
         return convData;
     }
 
