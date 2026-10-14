@@ -251,7 +251,10 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
         return histeqData;
     }
 
+
     public int[] conv2(byte[] data, int width, int height, double kernel[][]) {
+    // Single Channel 2D convolution
+
         // 0 is black and 255 is white.
         int size = height * width;
         int[] convData = new int[size];
@@ -263,16 +266,19 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
         // output
         // *********************** START YOUR CODE HERE **************************** //
 
-        // Detect if there is a negative in the kernel to determine whether we need to clamp the output
-        // If there are negatives, we don't want to clamp the negative outputs since it loses information
-        boolean clamp = true;
+        // Detect the type of kernel to determine whether we need to clamp the output.
+        // Determined by the idea that weights of Edge-Detection kernels sum to 0
+        //  while Sharpening Filter kernel weights sum to 1.
+        // If edge kernel detected, we don't want to clamp the negative outputs since it loses information
+        double kernel_sum = 0;
         for (int i = 0; i < 3; i++){
             for (int j = 0; j < 3; j++){
-                if (kernel[i][j] < 0){
-                    clamp = false;
-                    break;
-                }
+                kernel_sum += kernel[i][j];
             }
+        }
+        int minclamp = 0;
+        if(kernel_sum == 0) {
+            minclamp = -255;
         }
 
         // Perform convolution (the order of multiplying effectively flips the kernel in both axes)
@@ -299,8 +305,8 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
 
                 // Clamp data to 8 bit limits if no negatives in kernel to prep for merge
                 // If there are negatives, we don't want to clamp the negatives since that loses information
-                if (out < 0 && clamp) {
-                    out = 0;
+                if (out < minclamp) {
+                    out = minclamp;
                 }
 
                 // Clamp the values over 255 to avoid overflow no matter what
